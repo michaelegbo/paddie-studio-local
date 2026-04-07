@@ -18,6 +18,9 @@ function getProviderInfo(llmManager: LLMManager) {
     cachedProviders = llmManager.getAllProviders().map((provider) => ({
       name: provider.name,
       staticModels: provider.staticModels,
+      authType: provider.authType,
+      authApiPath: provider.authApiPath,
+      requiresElectron: provider.requiresElectron,
       getApiKeyLink: provider.getApiKeyLink,
       labelForGetApiKey: provider.labelForGetApiKey,
       icon: provider.icon,
@@ -29,6 +32,9 @@ function getProviderInfo(llmManager: LLMManager) {
     cachedDefaultProvider = {
       name: defaultProvider.name,
       staticModels: defaultProvider.staticModels,
+      authType: defaultProvider.authType,
+      authApiPath: defaultProvider.authApiPath,
+      requiresElectron: defaultProvider.requiresElectron,
       getApiKeyLink: defaultProvider.getApiKeyLink,
       labelForGetApiKey: defaultProvider.labelForGetApiKey,
       icon: defaultProvider.icon,

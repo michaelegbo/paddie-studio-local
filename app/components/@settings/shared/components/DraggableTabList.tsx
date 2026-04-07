@@ -1,4 +1,5 @@
-import { useDrag, useDrop } from 'react-dnd';
+import { DndProvider, useDrag, useDrop } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { motion } from 'framer-motion';
 import { classNames } from '~/utils/classNames';
 import type { TabVisibilityConfig } from '~/components/@settings/core/types';
@@ -146,18 +147,20 @@ export const DraggableTabList = ({
   };
 
   return (
-    <div className="space-y-2">
-      {tabs.map((tab, index) => (
-        <DraggableTabItem
-          key={tab.id}
-          tab={tab}
-          index={index}
-          moveTab={moveTab}
-          showControls={showControls}
-          onWindowChange={onWindowChange}
-          onVisibilityChange={onVisibilityChange}
-        />
-      ))}
-    </div>
+    <DndProvider backend={HTML5Backend}>
+      <div className="space-y-2">
+        {tabs.map((tab, index) => (
+          <DraggableTabItem
+            key={tab.id}
+            tab={tab}
+            index={index}
+            moveTab={moveTab}
+            showControls={showControls}
+            onWindowChange={onWindowChange}
+            onVisibilityChange={onVisibilityChange}
+          />
+        ))}
+      </div>
+    </DndProvider>
   );
 };

@@ -4,25 +4,44 @@ import { isDev } from '../utils/constants';
 import { store } from '../utils/store';
 
 export function createWindow(rendererURL: string) {
-  console.log('Creating window with URL:', rendererURL);
+  if (isDev) {
+    console.log('Creating window with URL:', rendererURL);
+  }
 
   const bounds = store.get('bounds');
-  console.log('restored bounds:', bounds);
+
+  if (isDev) {
+    console.log('restored bounds:', bounds);
+  }
 
   const win = new BrowserWindow({
-    ...{
-      width: 1200,
-      height: 800,
-      ...bounds,
-    },
-    vibrancy: 'under-window',
-    visualEffectState: 'active',
+    width: 1200,
+    height: 800,
+    frame: true,
+    show: false,
+    backgroundColor: '#0b1020',
+    ...bounds,
+    ...(process.platform === 'darwin'
+      ? {
+          vibrancy: 'under-window' as const,
+          visualEffectState: 'active' as const,
+        }
+      : {}),
     webPreferences: {
       preload: path.join(app.getAppPath(), 'build', 'electron', 'preload', 'index.cjs'),
     },
   });
 
-  console.log('Window created, loading URL...');
+  win.once('ready-to-show', () => {
+    if (!win.isDestroyed()) {
+      win.show();
+    }
+  });
+
+  if (isDev) {
+    console.log('Window created, loading URL...');
+  }
+
   win.loadURL(rendererURL).catch((err) => {
     console.log('Failed to load URL:', err);
   });
@@ -32,7 +51,9 @@ export function createWindow(rendererURL: string) {
   });
 
   win.webContents.on('did-finish-load', () => {
-    console.log('Window finished loading');
+    if (isDev) {
+      console.log('Window finished loading');
+    }
   });
 
   // Open devtools in development
@@ -40,12 +61,10 @@ export function createWindow(rendererURL: string) {
     win.webContents.openDevTools();
   }
 
-  const boundsListener = () => {
+  win.on('close', () => {
     const bounds = win.getBounds();
     store.set('bounds', bounds);
-  };
-  win.on('moved', boundsListener);
-  win.on('resized', boundsListener);
+  });
 
   return win;
 }

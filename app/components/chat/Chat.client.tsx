@@ -27,6 +27,7 @@ import { logStore } from '~/lib/stores/logs';
 import { streamingState } from '~/lib/stores/streaming';
 import { filesToArtifacts } from '~/utils/fileUtils';
 import { supabaseConnection } from '~/lib/stores/supabase';
+import { normalizeProviderName } from '~/lib/modules/llm/provider-utils';
 
 const toastAnimation = cssTransition({
   enter: 'animated fadeInRight',
@@ -138,7 +139,7 @@ export const ChatImpl = memo(
       return savedModel || DEFAULT_MODEL;
     });
     const [provider, setProvider] = useState(() => {
-      const savedProvider = Cookies.get('selectedProvider');
+      const savedProvider = normalizeProviderName(Cookies.get('selectedProvider'));
       return (PROVIDER_LIST.find((p) => p.name === savedProvider) || DEFAULT_PROVIDER) as ProviderInfo;
     });
 
@@ -210,6 +211,15 @@ export const ChatImpl = memo(
       initialMessages,
       initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
     });
+    useEffect(() => {
+      const savedProvider = Cookies.get('selectedProvider');
+      const normalizedProvider = normalizeProviderName(savedProvider);
+
+      if (savedProvider && normalizedProvider && savedProvider !== normalizedProvider) {
+        Cookies.set('selectedProvider', normalizedProvider, { expires: 30 });
+      }
+    }, []);
+
     useEffect(() => {
       const prompt = searchParams.get('prompt');
 

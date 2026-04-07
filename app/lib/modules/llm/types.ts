@@ -11,6 +11,9 @@ export interface ModelInfo {
 export interface ProviderInfo {
   name: string;
   staticModels: ModelInfo[];
+  authType?: 'api-key' | 'oauth';
+  authApiPath?: string;
+  requiresElectron?: boolean;
   getDynamicModels?: (
     apiKeys?: Record<string, string>,
     settings?: IProviderSetting,

@@ -8,6 +8,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { normalizeProviderName } from '~/lib/modules/llm/provider-utils';
 
 export async function action(args: ActionFunctionArgs) {
   return llmCallAction(args);
@@ -24,6 +25,54 @@ async function getModelList(options: {
 
 const logger = createScopedLogger('api.llmcall');
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  return 'Internal Server Error';
+}
+
+function buildErrorResponse(error: unknown) {
+  const message = getErrorMessage(error);
+
+  if (message.includes('API key')) {
+    return new Response(JSON.stringify({ error: 'Invalid or missing API key' }), {
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  if (
+    message.includes('Insufficient balance') ||
+    message.includes('recharge') ||
+    message.includes('resource package')
+  ) {
+    return new Response(JSON.stringify({ error: message }), {
+      status: 402,
+      statusText: 'Payment Required',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  return new Response(JSON.stringify({ error: message }), {
+    status: 500,
+    statusText: 'Internal Server Error',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
   const { system, message, model, provider, streamOutput } = await request.json<{
     system: string;
@@ -33,7 +82,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
     streamOutput?: boolean;
   }>();
 
-  const { name: providerName } = provider;
+  const providerName = normalizeProviderName(provider.name);
 
   // validate 'model' and 'provider' fields
   if (!model || typeof model !== 'string') {
@@ -79,18 +128,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       });
     } catch (error: unknown) {
       console.log(error);
-
-      if (error instanceof Error && error.message?.includes('API key')) {
-        throw new Response('Invalid or missing API key', {
-          status: 401,
-          statusText: 'Unauthorized',
-        });
-      }
-
-      throw new Response(null, {
-        status: 500,
-        statusText: 'Internal Server Error',
-      });
+      return buildErrorResponse(error);
     }
   } else {
     try {
@@ -103,13 +141,13 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
 
       const dynamicMaxTokens = modelDetails && modelDetails.maxTokenAllowed ? modelDetails.maxTokenAllowed : MAX_TOKENS;
 
-      const providerInfo = PROVIDER_LIST.find((p) => p.name === provider.name);
+      const providerInfo = PROVIDER_LIST.find((p) => p.name === providerName);
 
       if (!providerInfo) {
         throw new Error('Provider not found');
       }
 
-      logger.info(`Generating response Provider: ${provider.name}, Model: ${modelDetails.name}`);
+      logger.info(`Generating response Provider: ${providerInfo.name}, Model: ${modelDetails.name}`);
 
       const result = await generateText({
         system,
@@ -138,18 +176,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       });
     } catch (error: unknown) {
       console.log(error);
-
-      if (error instanceof Error && error.message?.includes('API key')) {
-        throw new Response('Invalid or missing API key', {
-          status: 401,
-          statusText: 'Unauthorized',
-        });
-      }
-
-      throw new Response(null, {
-        status: 500,
-        statusText: 'Internal Server Error',
-      });
+      return buildErrorResponse(error);
     }
   }
 }

@@ -3,6 +3,7 @@ import { BaseProvider } from './base-provider';
 import type { ModelInfo, ProviderInfo } from './types';
 import * as providers from './registry';
 import { createScopedLogger } from '~/utils/logger';
+import { CHATGPT_CODEX_PROVIDER_NAME, sortProvidersByPriority } from './provider-utils';
 
 const logger = createScopedLogger('LLMManager');
 export class LLMManager {
@@ -67,7 +68,7 @@ export class LLMManager {
   }
 
   getAllProviders(): BaseProvider[] {
-    return Array.from(this._providers.values());
+    return sortProvidersByPriority(Array.from(this._providers.values()));
   }
 
   getModelList(): ModelInfo[] {
@@ -198,7 +199,13 @@ export class LLMManager {
   }
 
   getDefaultProvider(): BaseProvider {
-    const firstProvider = this._providers.values().next().value;
+    const preferredProvider = this._providers.get(CHATGPT_CODEX_PROVIDER_NAME);
+
+    if (preferredProvider) {
+      return preferredProvider;
+    }
+
+    const firstProvider = this.getAllProviders()[0];
 
     if (!firstProvider) {
       throw new Error('No providers registered');

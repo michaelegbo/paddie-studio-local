@@ -16,6 +16,8 @@ interface Env {
   GOOGLE_GENERATIVE_AI_API_KEY: string;
   MISTRAL_API_KEY: string;
   XAI_API_KEY: string;
+  ZAI_API_KEY: string;
+  ZAI_API_BASE_URL: string;
   PERPLEXITY_API_KEY: string;
   AWS_BEDROCK_CONFIG: string;
 }

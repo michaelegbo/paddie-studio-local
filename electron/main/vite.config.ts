@@ -21,7 +21,9 @@ export default defineConfig({
 
         // Add all Node.js built-in modules as external
         'node:fs',
+        'node:http',
         'node:path',
+        'node:crypto',
         'node:url',
         'node:util',
         'node:stream',

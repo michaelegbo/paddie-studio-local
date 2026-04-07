@@ -3,6 +3,7 @@ import { DEFAULT_MODEL, DEFAULT_PROVIDER, MODEL_REGEX, PROVIDER_REGEX } from '~/
 import { IGNORE_PATTERNS, type FileMap } from './constants';
 import ignore from 'ignore';
 import type { ContextAnnotation } from '~/types/context';
+import { normalizeProviderName } from '~/lib/modules/llm/provider-utils';
 
 export function extractPropertiesFromMessage(message: Omit<Message, 'id'>): {
   model: string;
@@ -26,7 +27,7 @@ export function extractPropertiesFromMessage(message: Omit<Message, 'id'>): {
    * Extract provider
    * const providerMatch = message.content.match(PROVIDER_REGEX);
    */
-  const provider = providerMatch ? providerMatch[1] : DEFAULT_PROVIDER.name;
+  const provider = normalizeProviderName(providerMatch ? providerMatch[1] : DEFAULT_PROVIDER.name) || DEFAULT_PROVIDER.name;
 
   const cleanedContent = Array.isArray(message.content)
     ? message.content.map((item) => {

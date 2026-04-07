@@ -3,6 +3,9 @@ import type { ModelInfo } from '~/lib/modules/llm/types';
 export type ProviderInfo = {
   staticModels: ModelInfo[];
   name: string;
+  authType?: 'api-key' | 'oauth';
+  authApiPath?: string;
+  requiresElectron?: boolean;
   getDynamicModels?: (
     providerName: string,
     apiKeys?: Record<string, string>,
@@ -17,6 +20,7 @@ export type ProviderInfo = {
 export interface IProviderSetting {
   enabled?: boolean;
   baseUrl?: string;
+  reasoningEffort?: 'low' | 'medium' | 'high' | 'xhigh';
 }
 
 export type IProviderConfig = ProviderInfo & {

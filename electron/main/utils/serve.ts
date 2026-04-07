@@ -7,6 +7,22 @@ import { pathToFileURL } from 'node:url';
 import { app } from 'electron';
 import { isDev } from './constants';
 
+function shouldAttemptAssetServe(req: Request, pathname: string) {
+  if (!['GET', 'HEAD'].includes(req.method)) {
+    return false;
+  }
+
+  if (pathname.startsWith('/api/')) {
+    return false;
+  }
+
+  if (pathname.startsWith('/assets/')) {
+    return true;
+  }
+
+  return path.extname(pathname).length > 0;
+}
+
 export async function loadServerBuild(): Promise<any> {
   if (isDev) {
     console.log('Dev mode: server build not loaded');
@@ -37,21 +53,26 @@ export async function loadServerBuild(): Promise<any> {
 // serve assets built by vite.
 export async function serveAsset(req: Request, assetsPath: string): Promise<Response | undefined> {
   const url = new URL(req.url);
-  const fullPath = path.join(assetsPath, decodeURIComponent(url.pathname));
-  console.log('Serving asset, path:', fullPath);
+  const pathname = decodeURIComponent(url.pathname);
 
-  if (!fullPath.startsWith(assetsPath)) {
-    console.log('Path is outside assets directory:', fullPath);
+  if (!shouldAttemptAssetServe(req, pathname)) {
     return;
   }
 
-  const stat = await fs.stat(fullPath).catch((err) => {
-    console.log('Failed to stat file:', fullPath, err);
-    return undefined;
-  });
+  const relativePath = pathname.replace(/^\/+/, '');
+  const fullPath = path.join(assetsPath, relativePath);
+
+  if (!fullPath.startsWith(assetsPath)) {
+    if (isDev) {
+      console.log('Path is outside assets directory:', fullPath);
+    }
+
+    return;
+  }
+
+  const stat = await fs.stat(fullPath).catch(() => undefined);
 
   if (!stat?.isFile()) {
-    console.log('Not a file:', fullPath);
     return;
   }
 
@@ -62,7 +83,9 @@ export async function serveAsset(req: Request, assetsPath: string): Promise<Resp
     headers.set('Content-Type', mimeType);
   }
 
-  console.log('Serving file with mime type:', mimeType);
+  if (isDev) {
+    console.log('Serving asset:', fullPath, 'mime:', mimeType);
+  }
 
   const body = createReadableStreamFromReadable(createReadStream(fullPath));
 
