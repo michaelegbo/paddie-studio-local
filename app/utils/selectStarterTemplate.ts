@@ -92,8 +92,33 @@ export const selectStarterTemplate = async (options: { message: string; model: s
   };
   const response = await fetch('/api/llmcall', {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(requestBody),
   });
+
+  if (!response.ok) {
+    let errorMessage = `Template selection request failed with status ${response.status}`;
+
+    try {
+      const errorJson = (await response.json()) as { error?: string };
+
+      if (errorJson?.error) {
+        errorMessage = errorJson.error;
+      }
+    } catch {
+      // Ignore JSON parsing errors and fall back to a blank template.
+    }
+
+    console.warn('Starter template selection failed, falling back to blank template:', errorMessage);
+
+    return {
+      template: 'blank',
+      title: '',
+    };
+  }
+
   const respJson: { text: string } = await response.json();
   console.log(respJson);
 

@@ -28,6 +28,7 @@ import type { ElementInfo } from '~/components/workbench/Inspector';
 import type { TextUIPart, FileUIPart, Attachment } from '@ai-sdk/ui-utils';
 import { useMCPStore } from '~/lib/stores/mcp';
 import type { LlmErrorAlertType } from '~/types/actions';
+import { normalizeProviderName } from '~/lib/modules/llm/provider-utils';
 
 const logger = createScopedLogger('Chat');
 
@@ -107,7 +108,7 @@ export const ChatImpl = memo(
       return savedModel || DEFAULT_MODEL;
     });
     const [provider, setProvider] = useState(() => {
-      const savedProvider = Cookies.get('selectedProvider');
+      const savedProvider = normalizeProviderName(Cookies.get('selectedProvider'));
       return (PROVIDER_LIST.find((p) => p.name === savedProvider) || DEFAULT_PROVIDER) as ProviderInfo;
     });
     const { showChat } = useStore(chatStore);
@@ -176,6 +177,15 @@ export const ChatImpl = memo(
       initialMessages,
       initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
     });
+    useEffect(() => {
+      const savedProvider = Cookies.get('selectedProvider');
+      const normalizedProvider = normalizeProviderName(savedProvider);
+
+      if (savedProvider && normalizedProvider && savedProvider !== normalizedProvider) {
+        Cookies.set('selectedProvider', normalizedProvider, { expires: 30 });
+      }
+    }, []);
+
     useEffect(() => {
       const prompt = searchParams.get('prompt');
 

@@ -5,6 +5,11 @@ import type { TabVisibilityConfig, TabWindowConfig, UserTabConfig } from '~/comp
 import { DEFAULT_TAB_CONFIG } from '~/components/@settings/core/constants';
 import { toggleTheme } from './theme';
 import { create } from 'zustand';
+import {
+  CHATGPT_CODEX_PROVIDER_NAME,
+  normalizeProviderRecordKeys,
+} from '~/lib/modules/llm/provider-utils';
+import { DEFAULT_CODEX_REASONING_EFFORT, normalizeCodexReasoningEffort } from '~/lib/modules/llm/providers/codex-config';
 
 export interface Shortcut {
   key: string;
@@ -23,8 +28,10 @@ export interface Shortcuts {
   toggleTerminal: Shortcut;
 }
 
-export const URL_CONFIGURABLE_PROVIDERS = ['Ollama', 'LMStudio', 'OpenAILike'];
+export const URL_CONFIGURABLE_PROVIDERS = ['Ollama', 'LMStudio', 'OpenAILike', 'ZAI'];
 export const LOCAL_PROVIDERS = ['OpenAILike', 'LMStudio', 'Ollama'];
+
+const DISABLED_BY_DEFAULT_PROVIDERS: string[] = [];
 
 export type ProviderSetting = Record<string, IProviderConfig>;
 
@@ -53,6 +60,7 @@ export const shortcutsStore = map<Shortcuts>({
 // Create a single key for provider settings
 const PROVIDER_SETTINGS_KEY = 'provider_settings';
 const AUTO_ENABLED_KEY = 'auto_enabled_providers';
+const PROVIDER_SETTINGS_MIGRATION_KEY = 'provider_settings_migration_v2';
 
 // Add this helper function at the top of the file
 const isBrowser = typeof window !== 'undefined';
@@ -92,7 +100,12 @@ const getInitialProviderSettings = (): ProviderSetting => {
       ...provider,
       settings: {
         // Local providers should be disabled by default
-        enabled: !LOCAL_PROVIDERS.includes(provider.name),
+        enabled: !LOCAL_PROVIDERS.includes(provider.name) && !DISABLED_BY_DEFAULT_PROVIDERS.includes(provider.name),
+        ...(provider.name === CHATGPT_CODEX_PROVIDER_NAME
+          ? {
+              reasoningEffort: DEFAULT_CODEX_REASONING_EFFORT,
+            }
+          : {}),
       },
     };
   });
@@ -103,15 +116,36 @@ const getInitialProviderSettings = (): ProviderSetting => {
 
     if (savedSettings) {
       try {
-        const parsed = JSON.parse(savedSettings);
+        const parsed = normalizeProviderRecordKeys(JSON.parse(savedSettings) as Record<string, IProviderConfig>);
+
         Object.entries(parsed).forEach(([key, value]) => {
           if (initialSettings[key]) {
-            initialSettings[key].settings = (value as IProviderConfig).settings;
+            initialSettings[key].settings = {
+              ...initialSettings[key].settings,
+              ...(value as IProviderConfig).settings,
+            };
           }
         });
       } catch (error) {
         console.error('Error parsing saved provider settings:', error);
       }
+    }
+
+    if (initialSettings[CHATGPT_CODEX_PROVIDER_NAME]) {
+      initialSettings[CHATGPT_CODEX_PROVIDER_NAME].settings = {
+        ...initialSettings[CHATGPT_CODEX_PROVIDER_NAME].settings,
+        reasoningEffort: normalizeCodexReasoningEffort(
+          initialSettings[CHATGPT_CODEX_PROVIDER_NAME].settings.reasoningEffort,
+        ),
+      };
+    }
+
+    if (!localStorage.getItem(PROVIDER_SETTINGS_MIGRATION_KEY) && initialSettings[CHATGPT_CODEX_PROVIDER_NAME]) {
+      initialSettings[CHATGPT_CODEX_PROVIDER_NAME].settings = {
+        ...initialSettings[CHATGPT_CODEX_PROVIDER_NAME].settings,
+        enabled: true,
+      };
+      localStorage.setItem(PROVIDER_SETTINGS_MIGRATION_KEY, 'done');
     }
   }
 

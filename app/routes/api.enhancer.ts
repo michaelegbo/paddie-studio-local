@@ -4,6 +4,7 @@ import { stripIndents } from '~/utils/stripIndent';
 import type { ProviderInfo } from '~/types/model';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { normalizeProviderName } from '~/lib/modules/llm/provider-utils';
 
 export async function action(args: ActionFunctionArgs) {
   return enhancerAction(args);
@@ -19,7 +20,7 @@ async function enhancerAction({ context, request }: ActionFunctionArgs) {
     apiKeys?: Record<string, string>;
   }>();
 
-  const { name: providerName } = provider;
+  const providerName = normalizeProviderName(provider.name);
 
   // validate 'model' and 'provider' fields
   if (!model || typeof model !== 'string') {

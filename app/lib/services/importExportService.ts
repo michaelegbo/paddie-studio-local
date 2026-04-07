@@ -265,6 +265,7 @@ export class ImportExportService {
       OpenAILike: '',
       Together: '',
       xAI: '',
+      ZAI: '',
       Perplexity: '',
       Cohere: '',
       AzureOpenAI: '',

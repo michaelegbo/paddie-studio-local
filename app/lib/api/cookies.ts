@@ -1,3 +1,5 @@
+import { normalizeProviderRecordKeys } from '~/lib/modules/llm/provider-utils';
+
 export function parseCookies(cookieHeader: string | null) {
   const cookies: Record<string, string> = {};
 
@@ -24,10 +26,10 @@ export function parseCookies(cookieHeader: string | null) {
 
 export function getApiKeysFromCookie(cookieHeader: string | null): Record<string, string> {
   const cookies = parseCookies(cookieHeader);
-  return cookies.apiKeys ? JSON.parse(cookies.apiKeys) : {};
+  return cookies.apiKeys ? normalizeProviderRecordKeys(JSON.parse(cookies.apiKeys)) : {};
 }
 
 export function getProviderSettingsFromCookie(cookieHeader: string | null): Record<string, any> {
   const cookies = parseCookies(cookieHeader);
-  return cookies.providers ? JSON.parse(cookies.providers) : {};
+  return cookies.providers ? normalizeProviderRecordKeys(JSON.parse(cookies.providers)) : {};
 }

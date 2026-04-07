@@ -10,39 +10,50 @@ import { initViteServer, viteServer } from './utils/vite-server';
 import { setupMenu } from './ui/menu';
 import { createWindow } from './ui/window';
 import { initCookies, storeCookies } from './utils/cookie';
+import { startCodexAuthServer, stopCodexAuthServer } from './utils/codex-auth-server';
 import { loadServerBuild, serveAsset } from './utils/serve';
 import { reloadOnChange } from './utils/reload';
 
 Object.assign(console, log.functions);
 
-console.debug('main: import.meta.env:', import.meta.env);
-console.log('main: isDev:', isDev);
-console.log('NODE_ENV:', global.process.env.NODE_ENV);
-console.log('isPackaged:', app.isPackaged);
+const debugLog = (...args: unknown[]) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
+
+if (process.platform === 'win32') {
+  app.disableHardwareAcceleration();
+}
+
+debugLog('main: import.meta.env:', import.meta.env);
+debugLog('main: isDev:', isDev);
+debugLog('NODE_ENV:', global.process.env.NODE_ENV);
+debugLog('isPackaged:', app.isPackaged);
 
 // Log unhandled errors
 process.on('uncaughtException', async (error) => {
-  console.log('Uncaught Exception:', error);
+  console.error('Uncaught Exception:', error);
 });
 
 process.on('unhandledRejection', async (error) => {
-  console.log('Unhandled Rejection:', error);
+  console.error('Unhandled Rejection:', error);
 });
 
 (() => {
   const root = global.process.env.APP_PATH_ROOT ?? import.meta.env.VITE_APP_PATH_ROOT;
 
   if (root === undefined) {
-    console.log('no given APP_PATH_ROOT or VITE_APP_PATH_ROOT. default path is used.');
+    debugLog('no given APP_PATH_ROOT or VITE_APP_PATH_ROOT. default path is used.');
     return;
   }
 
   if (!path.isAbsolute(root)) {
-    console.log('APP_PATH_ROOT must be absolute path.');
+    console.error('APP_PATH_ROOT must be absolute path.');
     global.process.exit(1);
   }
 
-  console.log(`APP_PATH_ROOT: ${root}`);
+  debugLog(`APP_PATH_ROOT: ${root}`);
 
   const subdirName = pkg.name;
 
@@ -57,11 +68,11 @@ process.on('unhandledRejection', async (error) => {
   app.setAppLogsPath(path.join(root, subdirName, 'Logs'));
 })();
 
-console.log('appPath:', app.getAppPath());
+debugLog('appPath:', app.getAppPath());
 
 const keys: Parameters<typeof app.getPath>[number][] = ['home', 'appData', 'userData', 'sessionData', 'logs', 'temp'];
-keys.forEach((key) => console.log(`${key}:`, app.getPath(key)));
-console.log('start whenReady');
+keys.forEach((key) => debugLog(`${key}:`, app.getPath(key)));
+debugLog('start whenReady');
 
 declare global {
   // eslint-disable-next-line no-var, @typescript-eslint/naming-convention
@@ -70,18 +81,24 @@ declare global {
 
 (async () => {
   await app.whenReady();
-  console.log('App is ready');
+  debugLog('App is ready');
 
   // Load any existing cookies from ElectronStore, set as cookie
   await initCookies();
 
+  try {
+    await startCodexAuthServer();
+  } catch (error) {
+    console.error('Failed to start Codex auth server:', error);
+  }
+
   const serverBuild = await loadServerBuild();
 
   protocol.handle('http', async (req) => {
-    console.log('Handling request for:', req.url);
+    debugLog('Handling request for:', req.url);
 
     if (isDev) {
-      console.log('Dev mode: forwarding to vite server');
+      debugLog('Dev mode: forwarding to vite server');
       return await fetch(req);
     }
 
@@ -92,7 +109,7 @@ declare global {
 
       // Forward requests to specific local server ports
       if (url.port !== `${DEFAULT_PORT}`) {
-        console.log('Forwarding request to local server:', req.url);
+        debugLog('Forwarding request to local server:', req.url);
         return await fetch(req);
       }
 
@@ -101,7 +118,7 @@ declare global {
       const res = await serveAsset(req, assetPath);
 
       if (res) {
-        console.log('Served asset:', req.url);
+        debugLog('Served asset:', req.url);
         return res;
       }
 
@@ -117,7 +134,7 @@ declare global {
 
       // Create request handler with the server build
       const handler = createRequestHandler(serverBuild, 'production');
-      console.log('Handling request with server build:', req.url);
+      debugLog('Handling request with server build:', req.url);
 
       const result = await handler(req, {
         /*
@@ -130,7 +147,7 @@ declare global {
 
       return result;
     } catch (err) {
-      console.log('Error handling request:', {
+      console.error('Error handling request:', {
         url: req.url,
         error:
           err instanceof Error
@@ -167,7 +184,7 @@ declare global {
       })()
     : `http://localhost:${DEFAULT_PORT}`);
 
-  console.log('Using renderer URL:', rendererURL);
+  debugLog('Using renderer URL:', rendererURL);
 
   const win = await createWindow(rendererURL);
 
@@ -177,14 +194,11 @@ declare global {
     }
   });
 
-  console.log('end whenReady');
+  debugLog('end whenReady');
 
   return win;
 })()
   .then((win) => {
-    // IPC samples : send and recieve.
-    let count = 0;
-    setInterval(() => win.webContents.send('ping', `hello from main! ${count++}`), 60 * 1000);
     ipcMain.handle('ipcTest', (event, ...args) => console.log('ipc: renderer -> main', { event, ...args }));
 
     return win;
@@ -193,8 +207,13 @@ declare global {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
+    void stopCodexAuthServer();
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  void stopCodexAuthServer();
 });
 
 reloadOnChange();

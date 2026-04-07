@@ -1,6 +1,14 @@
 import { BrowserWindow, Menu } from 'electron';
 
 export function setupMenu(win: BrowserWindow): void {
+  if (process.platform !== 'darwin') {
+    Menu.setApplicationMenu(null);
+    win.removeMenu();
+    win.setMenuBarVisibility(false);
+
+    return;
+  }
+
   const app = Menu.getApplicationMenu();
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([

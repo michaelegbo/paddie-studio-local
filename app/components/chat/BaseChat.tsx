@@ -146,6 +146,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const [progressAnnotations, setProgressAnnotations] = useState<ProgressAnnotation[]>([]);
     const expoUrl = useStore(expoUrlAtom);
     const [qrModalOpen, setQrModalOpen] = useState(false);
+    const providerListSignature = (providerList || []).map((item) => item.name).join('|');
 
     useEffect(() => {
       if (expoUrl) {
@@ -227,7 +228,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             setIsModelLoading(undefined);
           });
       }
-    }, [providerList, provider]);
+    }, [providerListSignature]);
 
     const onApiKeysChange = async (providerName: string, apiKey: string) => {
       const newApiKeys = { ...apiKeys, [providerName]: apiKey };
@@ -253,6 +254,17 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       });
       setIsModelLoading(undefined);
     };
+
+    const handleApiKeyChange = React.useCallback(
+      (key: string) => {
+        if (!provider) {
+          return;
+        }
+
+        void onApiKeysChange(provider.name, key);
+      },
+      [provider?.name, apiKeys],
+    );
 
     const startListening = () => {
       if (recognition) {

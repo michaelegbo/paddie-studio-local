@@ -22,6 +22,8 @@ import type { IProviderSetting, ProviderInfo, IProviderConfig } from '~/types/mo
 import type { TabWindowConfig } from '~/components/@settings/core/types';
 import { logStore } from '~/lib/stores/logs';
 import { getLocalStorage, setLocalStorage } from '~/lib/persistence';
+import { isElectronRenderer } from '~/utils/environment';
+import { sortProvidersByPriority } from '~/lib/modules/llm/provider-utils';
 
 export interface Settings {
   theme: 'light' | 'dark' | 'system';
@@ -94,9 +96,10 @@ export function useSettings(): UseSettingsReturn {
   useEffect(() => {
     const active = Object.entries(providers)
       .filter(([_key, provider]) => provider.settings.enabled)
+      .filter(([_key, provider]) => !provider.requiresElectron || isElectronRenderer())
       .map(([_k, p]) => p);
 
-    setActiveProviders(active);
+    setActiveProviders(sortProvidersByPriority(active));
   }, [providers]);
 
   const saveSettings = useCallback((newSettings: Partial<Settings>) => {

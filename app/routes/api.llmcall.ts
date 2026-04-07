@@ -8,6 +8,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { normalizeProviderName } from '~/lib/modules/llm/provider-utils';
 
 export async function action(args: ActionFunctionArgs) {
   return llmCallAction(args);
@@ -64,6 +65,54 @@ function validateTokenLimits(modelDetails: ModelInfo, requestedTokens: number): 
   return { valid: true };
 }
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  return 'Internal Server Error';
+}
+
+function buildErrorResponse(error: unknown) {
+  const message = getErrorMessage(error);
+
+  if (message.includes('API key')) {
+    return new Response(JSON.stringify({ error: 'Invalid or missing API key' }), {
+      status: 401,
+      statusText: 'Unauthorized',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  if (
+    message.includes('Insufficient balance') ||
+    message.includes('recharge') ||
+    message.includes('resource package')
+  ) {
+    return new Response(JSON.stringify({ error: message }), {
+      status: 402,
+      statusText: 'Payment Required',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+  }
+
+  return new Response(JSON.stringify({ error: message }), {
+    status: 500,
+    statusText: 'Internal Server Error',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+}
+
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
   const { system, message, model, provider, streamOutput } = await request.json<{
     system: string;
@@ -73,7 +122,7 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
     streamOutput?: boolean;
   }>();
 
-  const { name: providerName } = provider;
+  const providerName = normalizeProviderName(provider.name);
 
   // validate 'model' and 'provider' fields
   if (!model || typeof model !== 'string') {
@@ -119,35 +168,11 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       });
     } catch (error: unknown) {
       console.log(error);
-
-      if (error instanceof Error && error.message?.includes('API key')) {
-        throw new Response('Invalid or missing API key', {
-          status: 401,
-          statusText: 'Unauthorized',
-        });
+      if (error instanceof Response) {
+        return error;
       }
 
-      // Handle token limit errors with helpful messages
-      if (
-        error instanceof Error &&
-        (error.message?.includes('max_tokens') ||
-          error.message?.includes('token') ||
-          error.message?.includes('exceeds') ||
-          error.message?.includes('maximum'))
-      ) {
-        throw new Response(
-          `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
-          {
-            status: 400,
-            statusText: 'Token Limit Exceeded',
-          },
-        );
-      }
-
-      throw new Response(null, {
-        status: 500,
-        statusText: 'Internal Server Error',
-      });
+      return buildErrorResponse(error);
     }
   } else {
     try {
@@ -170,13 +195,13 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
         });
       }
 
-      const providerInfo = PROVIDER_LIST.find((p) => p.name === provider.name);
+      const providerInfo = PROVIDER_LIST.find((p) => p.name === providerName);
 
       if (!providerInfo) {
         throw new Error('Provider not found');
       }
 
-      logger.info(`Generating response Provider: ${provider.name}, Model: ${modelDetails.name}`);
+      logger.info(`Generating response Provider: ${providerInfo.name}, Model: ${modelDetails.name}`);
 
       // DEBUG: Log reasoning model detection
       const isReasoning = isReasoningModel(modelDetails.name);
@@ -240,59 +265,11 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
       });
     } catch (error: unknown) {
       console.log(error);
-
-      const errorResponse = {
-        error: true,
-        message: error instanceof Error ? error.message : 'An unexpected error occurred',
-        statusCode: (error as any).statusCode || 500,
-        isRetryable: (error as any).isRetryable !== false,
-        provider: (error as any).provider || 'unknown',
-      };
-
-      if (error instanceof Error && error.message?.includes('API key')) {
-        return new Response(
-          JSON.stringify({
-            ...errorResponse,
-            message: 'Invalid or missing API key',
-            statusCode: 401,
-            isRetryable: false,
-          }),
-          {
-            status: 401,
-            headers: { 'Content-Type': 'application/json' },
-            statusText: 'Unauthorized',
-          },
-        );
+      if (error instanceof Response) {
+        return error;
       }
 
-      // Handle token limit errors with helpful messages
-      if (
-        error instanceof Error &&
-        (error.message?.includes('max_tokens') ||
-          error.message?.includes('token') ||
-          error.message?.includes('exceeds') ||
-          error.message?.includes('maximum'))
-      ) {
-        return new Response(
-          JSON.stringify({
-            ...errorResponse,
-            message: `Token limit error: ${error.message}. Try reducing your request size or using a model with higher token limits.`,
-            statusCode: 400,
-            isRetryable: false,
-          }),
-          {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-            statusText: 'Token Limit Exceeded',
-          },
-        );
-      }
-
-      return new Response(JSON.stringify(errorResponse), {
-        status: errorResponse.statusCode,
-        headers: { 'Content-Type': 'application/json' },
-        statusText: 'Error',
-      });
+      return buildErrorResponse(error);
     }
   }
 }

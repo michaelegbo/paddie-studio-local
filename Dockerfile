@@ -35,7 +35,6 @@ FROM build AS prod-deps
 # Keep only production deps for runtime
 RUN pnpm prune --prod --ignore-scripts
 
-
 # ---- production stage ----
 FROM prod-deps AS bolt-ai-production
 WORKDIR /app
@@ -44,12 +43,38 @@ ENV NODE_ENV=production
 ENV PORT=5173
 ENV HOST=0.0.0.0
 
-# Non-sensitive build arguments
+# Define environment variables with default values or let them be overridden
+ARG GROQ_API_KEY
+ARG HuggingFace_API_KEY
+ARG OPENAI_API_KEY
+ARG ANTHROPIC_API_KEY
+ARG OPEN_ROUTER_API_KEY
+ARG GOOGLE_GENERATIVE_AI_API_KEY
+ARG OLLAMA_API_BASE_URL
+ARG XAI_API_KEY
+ARG ZAI_API_KEY
+ARG ZAI_API_BASE_URL
+ARG TOGETHER_API_KEY
+ARG TOGETHER_API_BASE_URL
+ARG AWS_BEDROCK_CONFIG
 ARG VITE_LOG_LEVEL=debug
 ARG DEFAULT_NUM_CTX
 
 # Set non-sensitive environment variables
 ENV WRANGLER_SEND_METRICS=false \
+    GROQ_API_KEY=${GROQ_API_KEY} \
+    HuggingFace_API_KEY=${HuggingFace_API_KEY} \
+    OPENAI_API_KEY=${OPENAI_API_KEY} \
+    ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY} \
+    OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY} \
+    GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY} \
+    OLLAMA_API_BASE_URL=${OLLAMA_API_BASE_URL} \
+    XAI_API_KEY=${XAI_API_KEY} \
+    ZAI_API_KEY=${ZAI_API_KEY} \
+    ZAI_API_BASE_URL=${ZAI_API_BASE_URL} \
+    TOGETHER_API_KEY=${TOGETHER_API_KEY} \
+    TOGETHER_API_BASE_URL=${TOGETHER_API_BASE_URL} \
+    AWS_BEDROCK_CONFIG=${AWS_BEDROCK_CONFIG} \
     VITE_LOG_LEVEL=${VITE_LOG_LEVEL} \
     DEFAULT_NUM_CTX=${DEFAULT_NUM_CTX} \
     RUNNING_IN_DOCKER=true
@@ -83,16 +108,40 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=5 \
 # Start using dockerstart script with Wrangler
 CMD ["pnpm", "run", "dockerstart"]
 
-
 # ---- development stage ----
 FROM build AS development
 
-# Non-sensitive development arguments
+# Define the same environment variables for development
+ARG GROQ_API_KEY
+ARG HuggingFace_API_KEY
+ARG OPENAI_API_KEY
+ARG ANTHROPIC_API_KEY
+ARG OPEN_ROUTER_API_KEY
+ARG GOOGLE_GENERATIVE_AI_API_KEY
+ARG OLLAMA_API_BASE_URL
+ARG XAI_API_KEY
+ARG ZAI_API_KEY
+ARG ZAI_API_BASE_URL
+ARG TOGETHER_API_KEY
+ARG TOGETHER_API_BASE_URL
+ARG AWS_BEDROCK_CONFIG
 ARG VITE_LOG_LEVEL=debug
 ARG DEFAULT_NUM_CTX
 
-# Set non-sensitive environment variables for development
-ENV VITE_LOG_LEVEL=${VITE_LOG_LEVEL} \
+ENV GROQ_API_KEY=${GROQ_API_KEY} \
+    HuggingFace_API_KEY=${HuggingFace_API_KEY} \
+    OPENAI_API_KEY=${OPENAI_API_KEY} \
+    ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY} \
+    OPEN_ROUTER_API_KEY=${OPEN_ROUTER_API_KEY} \
+    GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY} \
+    OLLAMA_API_BASE_URL=${OLLAMA_API_BASE_URL} \
+    XAI_API_KEY=${XAI_API_KEY} \
+    ZAI_API_KEY=${ZAI_API_KEY} \
+    ZAI_API_BASE_URL=${ZAI_API_BASE_URL} \
+    TOGETHER_API_KEY=${TOGETHER_API_KEY} \
+    TOGETHER_API_BASE_URL=${TOGETHER_API_BASE_URL} \
+    AWS_BEDROCK_CONFIG=${AWS_BEDROCK_CONFIG} \
+    VITE_LOG_LEVEL=${VITE_LOG_LEVEL} \
     DEFAULT_NUM_CTX=${DEFAULT_NUM_CTX} \
     RUNNING_IN_DOCKER=true
 

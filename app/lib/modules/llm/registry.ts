@@ -1,3 +1,4 @@
+import CodexProvider from './providers/codex';
 import AnthropicProvider from './providers/anthropic';
 import CerebrasProvider from './providers/cerebras';
 import CohereProvider from './providers/cohere';
@@ -15,6 +16,7 @@ import OpenAIProvider from './providers/openai';
 import PerplexityProvider from './providers/perplexity';
 import TogetherProvider from './providers/together';
 import XAIProvider from './providers/xai';
+import ZAIProvider from './providers/zai';
 import HyperbolicProvider from './providers/hyperbolic';
 import AmazonBedrockProvider from './providers/amazon-bedrock';
 import GithubProvider from './providers/github';
@@ -22,6 +24,7 @@ import MoonshotProvider from './providers/moonshot';
 import ZaiProvider from './providers/z-ai';
 
 export {
+  CodexProvider,
   AnthropicProvider,
   CerebrasProvider,
   CohereProvider,
@@ -39,6 +42,7 @@ export {
   OpenAILikeProvider,
   PerplexityProvider,
   XAIProvider,
+  ZAIProvider,
   TogetherProvider,
   LMStudioProvider,
   AmazonBedrockProvider,

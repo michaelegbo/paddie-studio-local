@@ -19,6 +19,9 @@ export abstract class BaseProvider implements ProviderInfo {
   getApiKeyLink?: string;
   labelForGetApiKey?: string;
   icon?: string;
+  authType?: 'api-key' | 'oauth';
+  authApiPath?: string;
+  requiresElectron?: boolean;
 
   /**
    * Convert Cloudflare Env bindings to a plain Record<string, string>.

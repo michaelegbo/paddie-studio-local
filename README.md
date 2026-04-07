@@ -2,7 +2,7 @@
 
 [![bolt.diy: AI-Powered Full-Stack Web Development in the Browser](./public/social_preview_index.jpg)](https://bolt.diy)
 
-Welcome to bolt.diy, the official open source version of Bolt.new, which allows you to choose the LLM that you use for each prompt! Currently, you can use OpenAI, Anthropic, Ollama, OpenRouter, Gemini, LMStudio, Mistral, xAI, HuggingFace, DeepSeek, Groq, Cohere, Together, Perplexity, Moonshot (Kimi), Hyperbolic, GitHub Models, Amazon Bedrock, and OpenAI-like providers - and it is easily extended to use any other model supported by the Vercel AI SDK! See the instructions below for running this locally and extending it to include more models.
+Welcome to bolt.diy, the official open source version of Bolt.new, which allows you to choose the LLM that you use for each prompt. Currently, you can use OpenAI, Anthropic, Ollama, OpenRouter, Gemini, LMStudio, Mistral, xAI, ZAI, HuggingFace, DeepSeek, Groq, Cohere, Together, Perplexity, Moonshot (Kimi), Hyperbolic, GitHub Models, Amazon Bedrock, ChatGPT Codex in Electron, and OpenAI-like providers, and it is easily extended to use any other model supported by the Vercel AI SDK.
 
 -----
 Check the [bolt.diy Docs](https://stackblitz-labs.github.io/bolt.diy/) for more official installation instructions and additional information.
@@ -346,6 +346,8 @@ LMSTUDIO_BASE_URL=http://127.0.0.1:1234
 - **Hyperbolic** - High-performance model inference
 - **GitHub Models** - Models available through GitHub
 - **Amazon Bedrock** - AWS managed AI models
+- **Z.AI** - GLM Coding Plan models via the dedicated coding endpoint
+- **ChatGPT Codex** - Electron-only OAuth access through your ChatGPT plan
 
 #### Local Providers
 - **Ollama** - Run open-source models locally with advanced model management
